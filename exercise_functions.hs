@@ -11,3 +11,9 @@ myMaximum (x:xs)
     | x > maxTail = x
     | otherwise   = maxTail
     where maxTail = myMaximum xs
+
+
+replicate'     :: (Num i, Ord i) => i -> i -> [i]
+replicate' n x
+    | n <= 0    = []
+    | otherwise = x:replicate' (n - 1) x
