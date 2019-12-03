@@ -25,6 +25,11 @@ take' n (x:xs)
     | n <= 0    = []
     | otherwise = x:take' (n - 1) xs
 
-reverse' :: (Ord i) => [i] -> [i]
-reverse' [] = []
+
+reverse'        :: (Ord i) => [i] -> [i]
+reverse' []     = []
 reverse' (x:xs) = reverse' xs ++ [x]
+
+
+repeat'   :: i -> [i]
+repeat' x = x : repeat' x
