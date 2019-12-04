@@ -54,3 +54,9 @@ quicksort (x:xs) =
     let smallerSorted = quicksort [ a | a <- xs, a <= x ]
         greaterSorted = quicksort [ a | a <- xs, a > x ]
     in  smallerSorted ++ [x] ++ greaterSorted
+
+
+zipWith' :: (a -> b -> c) -> [a] -> [b] -> [c]
+zipWith' _ [] _ = []
+zipWith' _ _ [] = []
+zipWith' f (x:xs) (y:ys) = (f x y):zipWith' f xs ys
