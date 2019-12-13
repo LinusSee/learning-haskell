@@ -21,6 +21,13 @@ description:         Please see the README on GitHub at <https://github.com/gith
 
 dependencies:
 - base >= 4.7 && < 5
+- aeson
+- text
+- Spock >= 0.13.0.0
+- monad-logger
+- persistent
+- persistent-sqlite
+- persistent-template
 
 library:
   source-dirs: src
