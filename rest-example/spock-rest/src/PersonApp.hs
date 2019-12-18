@@ -7,9 +7,9 @@
 
 
 module PersonApp
-  ( app
-  ) where
-
+  --( app
+  --) where
+  where
 
 import           PersonModel
 
@@ -22,31 +22,43 @@ import           Data.Text                (Text, pack)
 
 app :: Api
 app = do
-  get "people" $ do
-    allPeople <- getPeople
-    json allPeople
-  get ("people" <//> var) $ \personId -> do
-    maybePerson <- getPerson personId
-    case maybePerson of
-      Nothing -> errorJson 2 "Could not find a person with a matching id"
-      Just thePerson -> json thePerson
-  post "people" $ do
-    maybePerson <- jsonBody :: ApiAction (Maybe Person)
-    case maybePerson of
-      Nothing -> errorJson 1 "Failed to parse request body as a person"
-      Just thePerson -> do
-        newId <- insertPerson thePerson
-        json $ object ["result" .= String "success", "id" .= newId]
-  put ("people" <//> var) $ \personId -> do
-    maybePerson <- jsonBody :: ApiAction (Maybe Person)
-    case maybePerson of
-      Nothing -> errorJson 1 "Failed to parse request body as a person"
-      Just thePerson -> do
-        result <- repsertPerson personId thePerson
-        json result
-  delete ("people" <//> var) $ \personId -> do
-    result <- deletePerson personId
-    json result
+  personGet
+  peopleGet
+  personPost
+  personPut
+  personDelete
+
+
+
+personGet = get "people" $ do
+  allPeople <- getPeople
+  json allPeople
+
+peopleGet = get ("people" <//> var) $ \personId -> do
+  maybePerson <- getPerson personId
+  case maybePerson of
+    Nothing -> errorJson 2 "Could not find a person with a matching id"
+    Just thePerson -> json thePerson
+
+personPost = post "people" $ do
+      maybePerson <- jsonBody :: ApiAction (Maybe Person)
+      case maybePerson of
+        Nothing -> errorJson 1 "Failed to parse request body as a person"
+        Just thePerson -> do
+          newId <- insertPerson thePerson
+          json $ object ["result" .= String "success", "id" .= newId]
+
+personPut = put ("people" <//> var) $ \personId -> do
+      maybePerson <- jsonBody :: ApiAction (Maybe Person)
+      case maybePerson of
+        Nothing -> errorJson 1 "Failed to parse request body as a person"
+        Just thePerson -> do
+          result <- repsertPerson personId thePerson
+          json result
+
+personDelete = delete ("people" <//> var) $ \personId -> do
+      result <- deletePerson personId
+      json result
 
 
 errorJson:: Int -> Text -> ApiAction ()
