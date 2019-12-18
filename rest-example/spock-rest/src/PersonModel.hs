@@ -12,6 +12,7 @@
 
 module PersonModel where
 
+
 import           Web.Spock
 import           Web.Spock.Config
 
