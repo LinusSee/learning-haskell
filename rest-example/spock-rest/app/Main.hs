@@ -14,6 +14,7 @@
 module Main where
 
 import           Lib
+import           PersonModel
 
 import           Web.Spock
 import           Web.Spock.Config
@@ -30,17 +31,6 @@ import           Database.Persist.Sqlite  hiding (get, delete)
 import           Database.Persist.TH
 
 
-share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
-Person json
-  name Text
-  age Int
-  deriving Show
-|]
-
-
-type Api = SpockM SqlBackend () () ()
-type ApiAction a = SpockAction SqlBackend () () a
-
 
 main :: IO ()
 main = do
@@ -52,10 +42,10 @@ main = do
 app :: Api
 app = do
   get "people" $ do
-    allPeople <- runSQL $ selectList [] [Desc PersonId]
+    allPeople <- getPeople
     json allPeople
   get ("people" <//> var) $ \personId -> do
-    maybePerson <- runSQL $ P.get personId :: ApiAction (Maybe Person)
+    maybePerson <- getPerson personId
     case maybePerson of
       Nothing -> errorJson 2 "Could not find a person with a matching id"
       Just thePerson -> json thePerson
@@ -64,22 +54,18 @@ app = do
     case maybePerson of
       Nothing -> errorJson 1 "Failed to parse request body as a person"
       Just thePerson -> do
-        newId <- runSQL $ insert thePerson
+        newId <- insertPerson thePerson
         json $ object ["result" .= String "success", "id" .= newId]
   put ("people" <//> var) $ \personId -> do
     maybePerson <- jsonBody :: ApiAction (Maybe Person)
     case maybePerson of
       Nothing -> errorJson 1 "Failed to parse request body as a person"
       Just thePerson -> do
-        result <- runSQL $ P.repsert personId thePerson :: ApiAction ()
+        result <- repsertPerson personId thePerson
         json result
   delete ("people" <//> var) $ \personId -> do
-    result <- runSQL $ P.delete (personId :: PersonId) :: ApiAction ()
+    result <- deletePerson personId
     json result
-
-
-runSQL :: (HasSpock m, SpockConn m ~ SqlBackend) => SqlPersistT (LoggingT IO) a -> m a
-runSQL action = runQuery $ \conn -> runStdoutLoggingT $ runSqlConn action conn
 
 
 errorJson:: Int -> Text -> ApiAction ()
