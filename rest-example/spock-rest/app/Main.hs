@@ -24,9 +24,9 @@ import           Data.Text                (Text, pack)
 import           GHC.Generics
 
 import           Control.Monad.Logger     (LoggingT, runStdoutLoggingT)
-import           Database.Persist         hiding (get)
+import           Database.Persist         hiding (get, delete)
 import qualified Database.Persist         as P
-import           Database.Persist.Sqlite  hiding (get)
+import           Database.Persist.Sqlite  hiding (get, delete)
 import           Database.Persist.TH
 
 
@@ -66,6 +66,16 @@ app = do
       Just thePerson -> do
         newId <- runSQL $ insert thePerson
         json $ object ["result" .= String "success", "id" .= newId]
+  put ("people" <//> var) $ \personId -> do
+    maybePerson <- jsonBody :: ApiAction (Maybe Person)
+    case maybePerson of
+      Nothing -> errorJson 1 "Failed to parse request body as a person"
+      Just thePerson -> do
+        result <- runSQL $ P.repsert personId thePerson :: ApiAction ()
+        json result
+  delete ("people" <//> var) $ \personId -> do
+    result <- runSQL $ P.delete (personId :: PersonId) :: ApiAction ()
+    json result
 
 
 runSQL :: (HasSpock m, SpockConn m ~ SqlBackend) => SqlPersistT (LoggingT IO) a -> m a
