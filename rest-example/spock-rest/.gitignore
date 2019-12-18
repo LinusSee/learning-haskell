@@ -1,3 +1,4 @@
 .stack-work/
 spock-rest.cabal
 *~
+api.db
