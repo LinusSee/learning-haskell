@@ -7,14 +7,15 @@
 
 
 module PersonApp
-  --( app
-  --) where
-  where
+  ( app
+  ) where
 
 import           PersonModel
 
 import           Web.Spock
 import           Web.Spock.Config
+
+import Network.HTTP.Types.Status
 
 import           Data.Aeson               hiding (json)
 import           Data.Text                (Text, pack)
@@ -37,28 +38,35 @@ personGet = get "people" $ do
 peopleGet = get ("people" <//> var) $ \personId -> do
   maybePerson <- getPerson personId
   case maybePerson of
-    Nothing -> errorJson 2 "Could not find a person with a matching id"
+    Nothing -> do
+      setStatus notFound404
+      errorJson 2 "Could not find a person with a matching id"
     Just thePerson -> json thePerson
 
 personPost = post "people" $ do
       maybePerson <- jsonBody :: ApiAction (Maybe Person)
       case maybePerson of
-        Nothing -> errorJson 1 "Failed to parse request body as a person"
+        Nothing -> do
+          setStatus badRequest400
+          errorJson 1 "Failed to parse request body as a person"
         Just thePerson -> do
           newId <- insertPerson thePerson
+          setStatus created201
           json $ object ["result" .= String "success", "id" .= newId]
 
 personPut = put ("people" <//> var) $ \personId -> do
       maybePerson <- jsonBody :: ApiAction (Maybe Person)
       case maybePerson of
-        Nothing -> errorJson 1 "Failed to parse request body as a person"
+        Nothing -> do
+          setStatus badRequest400
+          errorJson 1 "Failed to parse request body as a person"
         Just thePerson -> do
-          result <- repsertPerson personId thePerson
-          json result
+          repsertPerson personId thePerson
+          setStatus created201
 
-personDelete = delete ("people" <//> var) $ \personId -> do
-      result <- deletePerson personId
-      json result
+personDelete = delete ("people" <//> var) $ \personId ->
+      deletePerson personId
+
 
 
 errorJson:: Int -> Text -> ApiAction ()
