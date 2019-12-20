@@ -21,12 +21,18 @@ description:         Please see the README on GitHub at <https://github.com/gith
 
 dependencies:
 - base >= 4.7 && < 5
+- aeson
 - monad-logger
 - mtl
 - persistent
 - persistent-postgresql
 - persistent-template
+- servant
+- servant-client
+- servant-server
 - text
+- transformers
+- warp
 
 library:
   source-dirs: src
