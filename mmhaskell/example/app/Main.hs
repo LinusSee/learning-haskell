@@ -1,5 +1,6 @@
 module Main where
 
+import Database (localConnString, migrateDB)
 
 main :: IO ()
-main = putStrLn "Hello World"
+main = migrateDB localConnString
