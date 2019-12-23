@@ -11,7 +11,7 @@ import           Data.Int (Int64)
 import           Database.Persist (get, insert, delete)
 import           Database.Persist.Sql (fromSqlKey, toSqlKey)
 import           Database.Persist.Postgresql (ConnectionString, withPostgresqlConn, runMigration, SqlPersistT)
-import           Database.Redis (ConnectInfo, connect, Redis, runRedis, defaultConnectInfo, setex)
+import           Database.Redis (Connection, ConnectInfo, connect, Redis, runRedis, defaultConnectInfo, setex)
 import qualified Database.Redis as Redis
 
 
@@ -32,15 +32,16 @@ fetchPostgresConnection = return localConnString
 fetchRedisConnection :: IO RedisInfo
 fetchRedisConnection = return defaultConnectInfo
 
+fetchRedisPool :: RedisInfo -> IO Connection
+fetchRedisPool = connect
+
 
 runAction :: PGInfo -> SqlPersistT (LoggingT IO) a -> IO a
 runAction connectionString action =
   runStdoutLoggingT $ withPostgresqlConn connectionString $ \backend -> runReaderT action backend
 
-runRedisAction :: RedisInfo -> Redis a -> IO a
-runRedisAction redisInfo action = do
-  connection <- connect redisInfo
-  runRedis connection action
+runRedisAction :: Connection -> Redis a -> IO a
+runRedisAction = runRedis
 
 
 migrateDB :: PGInfo -> IO ()
@@ -58,13 +59,13 @@ deleteUserPG connString uid = runAction connString (delete userKey)
         userKey = toSqlKey uid
 
 
-cacheUser :: RedisInfo -> Int64 -> User -> IO ()
-cacheUser redisInfo uid user = runRedisAction redisInfo $ void $ setex byteId 3600 byteUser
+cacheUser :: Connection -> Int64 -> User -> IO ()
+cacheUser redisPool uid user = runRedisAction redisPool $ void $ setex byteId 3600 byteUser
   where byteId = pack . show $ uid
         byteUser = pack . show $ user
 
-fetchUserRedis :: RedisInfo -> Int64 -> IO (Maybe User)
-fetchUserRedis redisInfo uid = runRedisAction redisInfo $ do
+fetchUserRedis :: Connection -> Int64 -> IO (Maybe User)
+fetchUserRedis redisPool uid = runRedisAction redisPool $ do
   result <- Redis.get . pack . show $ uid
   case result of
     Right (Just userString) -> return $ Just (read . unpack $ userString)

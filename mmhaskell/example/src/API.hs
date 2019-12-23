@@ -17,8 +17,9 @@ import           Servant.API
 import           Servant.Client
 import           Servant.Server
 
-import           Database (fetchUserPG, createUserPG, fetchPostgresConnection, fetchRedisConnection, cacheUser, fetchUserRedis)
+import           Database (fetchUserPG, createUserPG, fetchPostgresConnection, fetchRedisConnection, fetchRedisPool, cacheUser, fetchUserRedis)
 import           Database (PGInfo, RedisInfo)
+import           Database.Redis (Connection)
 import           Schema
 
 
@@ -29,28 +30,30 @@ type UsersAPI =
 usersAPI :: Proxy UsersAPI
 usersAPI = Proxy :: Proxy UsersAPI
 
-fetchUsersHandler :: PGInfo -> RedisInfo -> Int64 -> Handler User
-fetchUsersHandler connString redisInfo uid = do
-  maybeUserRedis <- liftIO $ fetchUserRedis redisInfo uid
+fetchUsersHandler :: PGInfo -> Connection -> Int64 -> Handler User
+fetchUsersHandler connString connection uid = do
+  maybeUserRedis <- liftIO $ fetchUserRedis connection uid
+  --maybeUserRedis <- liftIO $ fetchUserPG connString uid
   case maybeUserRedis of
     Just user -> return user
     Nothing -> do
       maybeUser <- liftIO $ fetchUserPG connString uid
       case maybeUser of
-        Just user -> liftIO (cacheUser redisInfo uid user) >> return user
+        Just user -> liftIO (cacheUser connection uid user) >> return user
         Nothing -> Handler (throwE $ err401 { errBody = "Could not find a user with ID" })
 
 createUserHandler :: PGInfo -> User -> Handler Int64
 createUserHandler connString user = liftIO $ createUserPG connString user
 
 
-usersServer :: PGInfo -> RedisInfo -> Server UsersAPI
-usersServer pgInfo redisInfo =
-  fetchUsersHandler pgInfo redisInfo :<|>
+usersServer :: PGInfo -> Connection -> Server UsersAPI
+usersServer pgInfo redisConnection =
+  fetchUsersHandler pgInfo redisConnection :<|>
   createUserHandler pgInfo
 
 runServer :: IO ()
 runServer = do
   pgInfo <- fetchPostgresConnection
   redisInfo <- fetchRedisConnection
-  run 8000 (serve usersAPI (usersServer pgInfo redisInfo))
+  connection <- fetchRedisPool redisInfo
+  run 8000 (serve usersAPI (usersServer pgInfo connection))
